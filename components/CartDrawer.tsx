@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CartItem } from '../types';
 
 interface CartDrawerProps {
@@ -9,14 +9,42 @@ interface CartDrawerProps {
   onRemove: (id: string) => void;
 }
 
+const DELIVERY_AREAS = [
+  { id: 'a', name: 'مجمع A', fee: 1000 },
+  { id: 'b', name: 'مجمع B', fee: 1000 },
+];
+
 export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, items, onUpdateQuantity, onRemove }) => {
-  const total = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [street, setStreet] = useState('');
+  const [area, setArea] = useState(DELIVERY_AREAS[0].id);
+  const [notes, setNotes] = useState('');
+
+  const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  const deliveryFee = DELIVERY_AREAS.find(a => a.id === area)?.fee || 0;
+  const total = subtotal + deliveryFee;
 
   const handleWhatsAppOrder = () => {
+    if (!name || !phone || !street) {
+      alert('يرجى ملء جميع الحقول المطلوبة (الاسم، الرقم، الشارع)');
+      return;
+    }
+
     const phoneNumber = "9647750999818"; // تم إضافة رمز الدولة لضمان العمل
+    const selectedArea = DELIVERY_AREAS.find(a => a.id === area);
     
     let message = "🍔 *طلب جديد من مطعم بيك جكن*\n";
     message += "--------------------------\n";
+    message += `👤 *الاسم:* ${name}\n`;
+    message += `📱 *الرقم:* ${phone}\n`;
+    message += `📍 *المنطقة:* ${selectedArea?.name}\n`;
+    message += `🛣️ *الشارع:* ${street}\n`;
+    if (notes) {
+      message += `📝 *ملاحظات:* ${notes}\n`;
+    }
+    message += "--------------------------\n";
+    message += "🛒 *الطلبات:*\n";
     
     items.forEach((item, index) => {
       message += `${index + 1}. *${item.name}*\n`;
@@ -24,6 +52,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, items, 
     });
     
     message += "--------------------------\n";
+    message += `المجموع: ${subtotal.toLocaleString()} د.ع\n`;
+    message += `التوصيل: ${deliveryFee.toLocaleString()} د.ع\n`;
     message += `💰 *الإجمالي النهائي: ${total.toLocaleString()} د.ع*`;
     
     const encodedMessage = encodeURIComponent(message);
@@ -55,47 +85,123 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, items, 
               <p className="font-bold text-lg">سلتك فارغة.. جرب تطلب شي يونسك!</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {items.map((item) => (
-                <div key={item.id} className="flex gap-4 bg-slate-50 p-4 rounded-3xl border border-slate-100">
-                  <img src={item.image} className="w-24 h-24 rounded-2xl object-cover shadow-sm" alt={item.name} />
-                  <div className="flex-1 flex flex-col justify-between py-1">
-                    <div>
-                      <h4 className="font-black text-slate-900 text-lg mb-0.5">{item.name}</h4>
-                      <span className="text-red-500 font-black">{item.price.toLocaleString()} د.ع</span>
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <h3 className="font-bold text-slate-700 border-b pb-2">الطلبات</h3>
+                {items.map((item) => (
+                  <div key={item.id} className="flex gap-4 bg-slate-50 p-4 rounded-3xl border border-slate-100">
+                    <img src={item.image} className="w-24 h-24 rounded-2xl object-cover shadow-sm" alt={item.name} />
+                    <div className="flex-1 flex flex-col justify-between py-1">
+                      <div>
+                        <h4 className="font-black text-slate-900 text-lg mb-0.5">{item.name}</h4>
+                        <span className="text-red-500 font-black">{item.price.toLocaleString()} د.ع</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button 
+                          onClick={() => onUpdateQuantity(item.id, -1)}
+                          className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-900 flex items-center justify-center hover:bg-slate-100 font-black transition-colors"
+                        >
+                          -
+                        </button>
+                        <span className="font-black text-slate-900 w-6 text-center">{item.quantity}</span>
+                        <button 
+                          onClick={() => onUpdateQuantity(item.id, 1)}
+                          className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center hover:bg-slate-800 font-black transition-colors"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <button 
-                        onClick={() => onUpdateQuantity(item.id, -1)}
-                        className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-900 flex items-center justify-center hover:bg-slate-100 font-black transition-colors"
-                      >
-                        -
-                      </button>
-                      <span className="font-black text-slate-900 w-6 text-center">{item.quantity}</span>
-                      <button 
-                        onClick={() => onUpdateQuantity(item.id, 1)}
-                        className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center hover:bg-slate-800 font-black transition-colors"
-                      >
-                        +
-                      </button>
-                    </div>
+                    <button onClick={() => onRemove(item.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1 self-start">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </button>
                   </div>
-                  <button onClick={() => onRemove(item.id)} className="text-slate-300 hover:text-red-500 transition-colors p-1 self-start">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-4 bg-slate-50 p-5 rounded-3xl border border-slate-100">
+                <h3 className="font-bold text-slate-700 border-b pb-2">تفاصيل التوصيل</h3>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-600 mb-1">الاسم <span className="text-red-500">*</span></label>
+                    <input 
+                      type="text" 
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
+                      placeholder="الاسم الكامل"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-bold text-slate-600 mb-1">الرقم <span className="text-red-500">*</span></label>
+                    <input 
+                      type="tel" 
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all text-left"
+                      placeholder="07XX XXX XXXX"
+                      dir="ltr"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-slate-600 mb-1">المنطقة / المحافظة <span className="text-red-500">*</span></label>
+                    <select 
+                      value={area}
+                      onChange={(e) => setArea(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
+                    >
+                      {DELIVERY_AREAS.map(a => (
+                        <option key={a.id} value={a.id}>{a.name} (توصيل {a.fee.toLocaleString()} د.ع)</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-slate-600 mb-1">اسم الشارع <span className="text-red-500">*</span></label>
+                    <input 
+                      type="text" 
+                      value={street}
+                      onChange={(e) => setStreet(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
+                      placeholder="اسم الشارع أو أقرب نقطة دالة"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-slate-600 mb-1">ملاحظات الزبون</label>
+                    <textarea 
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all resize-none h-20"
+                      placeholder="أي ملاحظات إضافية للطلب أو التوصيل..."
+                    />
+                  </div>
                 </div>
-              ))}
+              </div>
             </div>
           )}
         </div>
         
         {items.length > 0 && (
           <div className="p-6 border-t border-slate-100 space-y-5 bg-slate-50">
-            <div className="flex justify-between items-center px-2">
-              <span className="text-lg font-bold text-slate-500">الإجمالي النهائي</span>
-              <span className="text-2xl font-black text-slate-900">{total.toLocaleString()} د.ع</span>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center px-2 text-sm text-slate-500 font-bold">
+                <span>المجموع</span>
+                <span>{subtotal.toLocaleString()} د.ع</span>
+              </div>
+              <div className="flex justify-between items-center px-2 text-sm text-slate-500 font-bold">
+                <span>التوصيل</span>
+                <span>{deliveryFee.toLocaleString()} د.ع</span>
+              </div>
+              <div className="flex justify-between items-center px-2 pt-2 border-t border-slate-200/60">
+                <span className="text-lg font-bold text-slate-700">الإجمالي النهائي</span>
+                <span className="text-2xl font-black text-red-600">{total.toLocaleString()} د.ع</span>
+              </div>
             </div>
             <button 
               onClick={handleWhatsAppOrder}
